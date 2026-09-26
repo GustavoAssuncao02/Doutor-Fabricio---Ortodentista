@@ -1,0 +1,5 @@
+@media (max-width: 600px) {
+  .hero .hero-copy h1 {
+    font-size: clamp(37px, 11.5vw, 46px);
+  }
+}
