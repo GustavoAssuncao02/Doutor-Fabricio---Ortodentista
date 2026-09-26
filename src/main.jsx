@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ArrowRight, ArrowDown, Menu, X, Sparkles, Heart, ShieldCheck, MapPin, Instagram, Clock3, Plus, Minus, MessageCircle, GraduationCap, Smile, MoveUpRight, Star, Quote, Pause, Play } from 'lucide-react';
 import './styles.css';
 import './mobile.css';
+import './reviews.css';
 import heroPhoto480 from './assets/fabricio-hero-480.webp';
 import heroPhoto960 from './assets/fabricio-hero-960.webp';
 import aboutPhoto480 from './assets/fabricio-sobre-480.webp';
@@ -34,7 +35,41 @@ function App() {
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [reviewsPaused, setReviewsPaused] = useState(false);
+  const reviewsDrag = useRef(null);
   useEffect(() => { const onScroll = () => setScrolled(window.scrollY > 30); onScroll(); window.addEventListener('scroll', onScroll, { passive: true }); const onKey = e => { if (e.key === 'Escape') setMenu(false); }; window.addEventListener('keydown', onKey); return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('keydown', onKey); }; }, []);
+  const startReviewsDrag = event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const track = event.currentTarget.querySelector('.reviews-track');
+    const transform = getComputedStyle(track).transform;
+    const startX = transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+    track.style.animationName = 'none';
+    track.style.transform = `translateX(${startX}px)`;
+    reviewsDrag.current = { pointerId: event.pointerId, startPointerX: event.clientX, startX, track };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    if (event.pointerType === 'mouse') event.preventDefault();
+  };
+  const moveReviewsDrag = event => {
+    const drag = reviewsDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    drag.currentX = drag.startX + event.clientX - drag.startPointerX;
+    drag.track.style.transform = `translateX(${drag.currentX}px)`;
+  };
+  const finishReviewsDrag = event => {
+    const drag = reviewsDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const width = drag.track.scrollWidth / 2;
+    const duration = Number.parseFloat(getComputedStyle(drag.track).animationDuration) || 54;
+    const x = drag.currentX ?? drag.startX;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      drag.track.style.transform = `translateX(${x}px)`;
+    } else {
+      const phase = ((-x % width) + width) % width;
+      drag.track.style.animationDelay = `-${(phase * duration) / width}s`;
+      drag.track.style.animationName = '';
+      drag.track.style.transform = '';
+    }
+    reviewsDrag.current = null;
+  };
   return <>
     <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header className={scrolled ? 'header scrolled' : 'header'}><div className="container header-inner"><Brand/><nav className={menu ? 'nav is-open' : 'nav'} id="navigation" aria-label="Navegação principal">{[['O doutor','sobre'],['Tratamentos','tratamentos'],['Convênios','convenios'],['Contato','contato']].map(([label,id]) => <a key={id} href={`#${id}`} onClick={() => setMenu(false)}>{label}</a>)}<Button className="nav-cta"/></nav><button className="menu-toggle" aria-label={menu ? 'Fechar menu' : 'Abrir menu'} aria-controls="navigation" aria-expanded={menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</button></div></header>
@@ -52,7 +87,15 @@ function App() {
             <div><Eyebrow>QUEM JÁ ESTEVE AQUI</Eyebrow><h2 id="reviews-title">Palavras de quem<br/>confia no nosso cuidado<span>.</span></h2></div>
             <div className="reviews-rating"><div className="review-stars" aria-label="Cinco estrelas">{Array.from({length:5},(_,i)=><Star key={i} size={16} fill="currentColor"/>)}</div><strong>5,0 <span>no Google</span></strong><small>134 avaliações na ficha do consultório</small></div>
           </div>
-          <div className={`reviews-marquee ${reviewsPaused ? 'is-paused' : ''}`}>
+          <div
+            className={`reviews-marquee ${reviewsPaused ? 'is-paused' : ''}`}
+            role="region"
+            aria-label="Avaliações de clientes. Arraste para os lados para navegar."
+            onPointerDown={startReviewsDrag}
+            onPointerMove={moveReviewsDrag}
+            onPointerUp={finishReviewsDrag}
+            onPointerCancel={finishReviewsDrag}
+          >
             <div className="reviews-track">
               <div className="reviews-set">
                 <article className="review-card"><div className="review-card-top"><Quote size={20}/><div className="review-stars" aria-label="Cinco estrelas">{Array.from({length:5},(_,i)=><Star key={i} size={13} fill="currentColor"/>)}</div></div><p>“Dr. Fabrício é um profissional impecável! O trabalho de restauração foi feito com muita precisão e cuidado, sem nenhum desconforto.”</p><div className="review-author"><span>NL</span><div><strong>Nailton Leones Nascimento</strong></div></div></article>

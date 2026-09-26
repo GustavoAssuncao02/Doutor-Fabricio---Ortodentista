@@ -1,0 +1,17 @@
+.reviews-marquee {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.reviews-marquee:active {
+  cursor: grabbing;
+}
+
+.reviews-track {
+  gap: 0;
+}
+
+.reviews-set {
+  gap: 18px;
+}
